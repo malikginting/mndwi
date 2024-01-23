@@ -255,16 +255,11 @@ def main():
                 - [Credit](#credit)
             """)
     
-        st.subheader("Contact:")
-        st.markdown("[![LinkedIn](https://static.licdn.com/sc/h/8s162nmbcnfkg7a0k8nq9wwqo)](https://linkedin.com/in/ahmed-islem-mokhtari) [![GitHub](https://github.githubassets.com/favicons/favicon-dark.png)](https://github.com/IndigoWizard) [![Medium](https://miro.medium.com/1*m-R_BkNf1Qjr1YbyOIJY2w.png)](https://medium.com/@Indigo.Wizard/mt-chenoua-forest-fires-analysis-with-remote-sensing-614681f468e9)")
-
-        st.caption("ʕ •ᴥ•ʔ Star⭐the [project on GitHub](https://github.com/IndigoWizard/mndwi-Viewer/)!")
-
+        
     with st.container():
         st.title("MNDWI Viewer")
         st.markdown("**Monitor Flood by Viewing & Comparing mndwi Values Through Time and Location with Landsat 8 Satellite Images on The Fly!**")
     
-    # columns for input - map
     with st.form("input_form"):
         c1, c2 = st.columns([3, 1])
         #### User input section - START
@@ -274,7 +269,7 @@ def main():
             ## Cloud coverage input
                 st.info("Cloud Coverage 🌥️")
                 cloud_pixel_percentage = st.slider(label="cloud pixel rate", min_value=5, max_value=100, step=5, value=85 , label_visibility="collapsed")
-
+                
             ## File upload
                 # User input GeoJSON file
                 st.info("Upload Area Of Interest file:")
@@ -284,26 +279,26 @@ def main():
             
             ## Accessibility: Color palette input
                 st.info("Custom Color Palettes")
-                accessibility = st.selectbox("Accessibility: Colorblind-friendly Palettes", ["Normal", "Deuteranopia", "Protanopia", "Tritanopia", "Achromatopsia"])
+                accessibility = st.selectbox("Accessibility: Colorblind-friendly Palettes", ["Normal", "Non Banjir", "Banjir Ringan", "Banjir Sedang", "Banjir Tinggi"])
 
                 # Define default color palettes: used in map layers & map legend
                 default_mndwi_palette = ["#ffffe5", "#f7fcb9", "#78c679", "#41ab5d", "#238443", "#005a32"]
                 default_reclassified_mndwi_palette = ["#a50026","#ed5e3d","#f9f7ae","#f4ff78","#9ed569","#229b51","#006837"]
-                
+
                 # a copy of default colors that can be reaffected
                 mndwi_palette = default_mndwi_palette.copy() 
                 reclassified_mndwi_palette = default_reclassified_mndwi_palette.copy()
 
-                if accessibility == "Deuteranopia":
+                if accessibility == "Non Banjir":
                     mndwi_palette = ["#fffaa1","#f4ef8e","#9a5d67","#573f73","#372851","#191135"]
                     reclassified_mndwi_palette = ["#95a600","#92ed3e","#affac5","#78ffb0","#69d6c6","#22459c","#000e69"]
-                elif accessibility == "Protanopia":
+                elif accessibility == "Banjir Ringan":
                     mndwi_palette = ["#a6f697","#7def75","#2dcebb","#1597ab","#0c677e","#002c47"]
                     reclassified_mndwi_palette = ["#95a600","#92ed3e","#affac5","#78ffb0","#69d6c6","#22459c","#000e69"]
-                elif accessibility == "Tritanopia":
+                elif accessibility == "Banjir Sedang":
                     mndwi_palette = ["#cdffd7","#a1fbb6","#6cb5c6","#3a77a5","#205080","#001752"]
                     reclassified_mndwi_palette = ["#ed4700","#ed8a00","#e1fabe","#99ff94","#87bede","#2e40cf","#0600bc"]
-                elif accessibility == "Achromatopsia":
+                elif accessibility == "Banjir Tinggi":
                     mndwi_palette = ["#407de0", "#2763da", "#394388", "#272c66", "#16194f", "#010034"]
                     reclassified_mndwi_palette = ["#004f3d", "#338796", "#66a4f5", "#3683ff", "#3d50ca", "#421c7f", "#290058"]
 
@@ -382,7 +377,9 @@ def main():
             ## Other imagery processing operations go here 
             # mndwi
             def getmndwi(collection):
-                return collection.normalizedDifference(['B3', 'B6'])
+                green_band = 'B3'  # Update with the correct band name for red
+                swir_band = 'B11'  # Update with the correct band name for SWIR
+                return collection.normalizedDifference(['B3', 'B11'])
 
             # clipping to AOI
             initial_mndwi = getmndwi(initial_sat_imagery)
@@ -407,14 +404,11 @@ def main():
             # ##### mndwi classification: 7 classes
             def classify_mndwi(masked_image): # better use a masked image to avoid water bodies obstracting the result as possible
                 mndwi_classified = ee.Image(masked_image) \
-                .where(masked_image.gte(0).And(masked_image.lt(0.15)), 1) \
-                .where(masked_image.gte(0.15).And(masked_image.lt(0.25)), 2) \
-                .where(masked_image.gte(0.25).And(masked_image.lt(0.35)), 3) \
+                .where(masked_image.gte(-1).And(masked_image.lt(-0.1)), 1) \
+                .where(masked_image.gte(0).And(masked_image.lt(0.2)), 2) \
+                .where(masked_image.gte(0.21).And(masked_image.lt(0.35)), 3) \
                 .where(masked_image.gte(0.35).And(masked_image.lt(0.45)), 4) \
-                .where(masked_image.gte(0.45).And(masked_image.lt(0.65)), 5) \
-                .where(masked_image.gte(0.65).And(masked_image.lt(0.75)), 6) \
-                .where(masked_image.gte(0.75), 7) \
-                
+                .where(masked_image.gte(0.45).And(masked_image.lt(0.65)), 5)             
                 return mndwi_classified
 
             # Classify masked mndwi
@@ -499,13 +493,11 @@ def main():
                 <div class="reclassifiedmndwi">
                     <h5>mndwi Classes</h5>
                     <ul style="list-style-type: none; padding: 0;">
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {0};">&#9632;</span> Absent Vegetation. (Water/Clouds/Built-up/Rocks/Sand Surfaces..)</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {1};">&#9632;</span> Bare Soil.</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {2};">&#9632;</span> Low Vegetation.</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {3};">&#9632;</span> Light Vegetation.</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {4};">&#9632;</span> Moderate Vegetation.</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {5};">&#9632;</span> Strong Vegetation.</li>
-                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {6};">&#9632;</span> Dense Vegetation.</li>
+                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {0};">&#9632;</span> Vegetasi lainnya. (/Built-up/Rocks/Sand Surfaces)</li>
+                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {1};">&#9632;</span> Non Banjir</li>
+                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {2};">&#9632;</span> Banjir Ringan</li>
+                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {3};">&#9632;</span> Banjir Sedang.</li>
+                        <li style="margin: 0.2em 0px; padding: 0;"><span style="color: {4};">&#9632;</span> Banjir Tinggi</li>
                     </ul>
                 </div>
             """.format(*reclassified_mndwi_palette)
